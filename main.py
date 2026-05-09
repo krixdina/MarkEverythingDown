@@ -4,6 +4,17 @@ from pathlib import Path
 from processors.base import BaseDocumentProcessor, DocumentType
 from processors.vision.vision_processor import VisionDocumentProcessor
 
+
+def _ensure_localhost_bypasses_proxy():
+    """Keep localhost Gradio traffic out of host-level HTTP proxies."""
+    for key in ("NO_PROXY", "no_proxy"):
+        current = os.environ.get(key, "")
+        entries = [entry.strip() for entry in current.split(",") if entry.strip()]
+        for host in ("127.0.0.1", "localhost"):
+            if host not in entries:
+                entries.append(host)
+        os.environ[key] = ",".join(entries)
+
 def process_file(file_path, output_dir, force_vision=False, max_concurrent=2, images_per_batch=1, 
                temperature=0.0, max_tokens=None, dynamic_batching=True, max_tokens_per_batch=4000):
     """Process a single file"""
@@ -93,6 +104,7 @@ def main():
     # Launch UI if requested
     if args.ui:
         from ui.app import create_ui
+        _ensure_localhost_bypasses_proxy()
         app = create_ui()
         # Allow access to any path
         app.launch(allowed_paths=["/"])

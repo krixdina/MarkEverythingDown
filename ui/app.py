@@ -8,6 +8,13 @@ from processors.vision.vision_processor import VisionDocumentProcessor
 import sys
 import time
 
+def get_ui_api_defaults():
+    """Read API defaults from environment variables for UI prefill."""
+    api_key = VisionDocumentProcessor._get_env_override(VisionDocumentProcessor.API_KEY_ENV_VARS) or "lmstudio"
+    base_url = VisionDocumentProcessor._get_env_override(VisionDocumentProcessor.BASE_URL_ENV_VARS) or "http://localhost:1234/v1"
+    model = VisionDocumentProcessor._get_env_override(VisionDocumentProcessor.MODEL_ENV_VARS) or "qwen2.5-vl-7b-instruct"
+    return api_key, base_url, model
+
 def detect_document_type(file_obj):
     """Detect document type from file extension"""
     if file_obj is None:
@@ -33,13 +40,18 @@ def process_documents(file_objs, output_dir, force_vision, max_concurrent, image
             output_dir = "output" # Default directory
             os.makedirs(output_dir, exist_ok=True)
             
+        default_api_config = VisionDocumentProcessor.get_default_api_config()
+        resolved_api_key = api_key or default_api_config["api_key"]
+        resolved_api_url = api_url or default_api_config["base_url"]
+        resolved_model = model or default_api_config["model"]
+
         # Configure API globally
-        if api_key:
-            print(f"Configuring global API with key '{api_key}' at URL: {api_url}, model: {model}")
+        if resolved_api_key:
+            print(f"Configuring global API with key '{resolved_api_key}' at URL: {resolved_api_url}, model: {resolved_model}")
             VisionDocumentProcessor.configure_api(
-                api_key=api_key,
-                base_url=api_url,
-                model=model
+                api_key=resolved_api_key,
+                base_url=resolved_api_url,
+                model=resolved_model
             )
         
         # Process files with progress updates
@@ -191,6 +203,8 @@ def process_documents(file_objs, output_dir, force_vision, max_concurrent, image
     
 def create_ui():
     """Create enhanced Gradio UI with batch processing"""
+    default_api_key, default_api_url, default_model = get_ui_api_defaults()
+
     # Set a modern theme and customize CSS with baby blue color
     custom_css = """
     :root {
@@ -340,7 +354,7 @@ def create_ui():
                             api_key = gr.Textbox(
                                 label="API Key", 
                                 placeholder="lmstudio",
-                                value="lmstudio",
+                                value=default_api_key,
                                 info="API key for vision model"
                             )
                         
@@ -348,14 +362,14 @@ def create_ui():
                             api_url = gr.Textbox(
                                 label="API URL", 
                                 placeholder="http://localhost:1234/v1",
-                                value="http://localhost:1234/v1",
+                                value=default_api_url,
                                 info="Base URL for API endpoint"
                             )
                             
                             model = gr.Textbox(
                                 label="Model Name",
                                 placeholder="qwen2.5-vl-7b-instruct",
-                                value="qwen2.5-vl-7b-instruct",
+                                value=default_model,
                                 info="Model to use for processing"
                             )
                     

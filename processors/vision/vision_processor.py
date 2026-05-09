@@ -14,6 +14,27 @@ class VisionDocumentProcessor(BaseDocumentProcessor):
     # Class variables to store API configuration
     DEFAULT_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     DEFAULT_MODEL = "qwen2.5-vl-72b-instruct"
+    API_KEY_ENV_VARS = ("QWEN_API_KEY", "OPENAI_API_KEY")
+    BASE_URL_ENV_VARS = ("QWEN_BASE_URL", "OPENAI_BASE_URL")
+    MODEL_ENV_VARS = ("QWEN_MODEL",)
+
+    @classmethod
+    def _get_env_override(cls, env_var_names: tuple) -> Optional[str]:
+        """Return the first non-empty environment override from the given names."""
+        for env_var in env_var_names:
+            value = os.environ.get(env_var)
+            if value:
+                return value
+        return None
+
+    @classmethod
+    def get_default_api_config(cls) -> Dict[str, Optional[str]]:
+        """Collect default API settings from environment variables and built-in fallbacks."""
+        return {
+            "api_key": cls._get_env_override(cls.API_KEY_ENV_VARS),
+            "base_url": cls._get_env_override(cls.BASE_URL_ENV_VARS) or cls.DEFAULT_BASE_URL,
+            "model": cls._get_env_override(cls.MODEL_ENV_VARS) or cls.DEFAULT_MODEL,
+        }
     
     # Class method to set API configuration
     @classmethod
@@ -49,13 +70,15 @@ class VisionDocumentProcessor(BaseDocumentProcessor):
             max_tokens: Maximum tokens to generate. None means using model's default limit.
         """
         super().__init__()
+
+        default_config = self.get_default_api_config()
         
         # Try to get API key from different sources in order of priority
-        self.api_key = api_key or getattr(self.__class__, 'api_key', None) or os.environ.get("QWEN_API_KEY")
+        self.api_key = api_key or getattr(self.__class__, 'api_key', None) or default_config["api_key"]
         
         # Same for base_url and model
-        self.base_url = base_url or getattr(self.__class__, 'base_url', None) or self.DEFAULT_BASE_URL
-        self.model = model or getattr(self.__class__, 'model', None) or self.DEFAULT_MODEL
+        self.base_url = base_url or getattr(self.__class__, 'base_url', None) or default_config["base_url"]
+        self.model = model or getattr(self.__class__, 'model', None) or default_config["model"]
         
         # Store generation parameters
         self.temperature = float(temperature) if temperature is not None else 0.0
@@ -65,7 +88,8 @@ class VisionDocumentProcessor(BaseDocumentProcessor):
         if not self.api_key:
             raise ValueError(
                 "API key not provided. Either pass it to the constructor, "
-                "use VisionDocumentProcessor.configure_api(), or set the QWEN_API_KEY environment variable."
+                "use VisionDocumentProcessor.configure_api(), or set one of these environment variables: "
+                f"{', '.join(self.API_KEY_ENV_VARS)}."
             )
             
     def process(self, file_path: str, max_concurrent: int = 2, images_per_batch: int = 1, 
@@ -414,10 +438,22 @@ class VisionDocumentProcessor(BaseDocumentProcessor):
         markdown_messages = [
             {
                 "role": "system",
-                "content": '''You are an AI specialized in recognizing and extracting text. 
-                Your mission is to analyze the image document and generate the result in markdown format, use markdown syntax to preserve the title level of the original document.
-                You should not include page numbers for better readability.
-                When encountering chat history, use the format of chat message, clearly document the sender of each message.
+                "content": '''You are an AI specialized in OCR, document parsing, and layout-aware markdown conversion.
+                Your task is to analyze the document image and convert it into clean markdown while preserving the original logical structure.
+
+                Follow these layout rules carefully:
+                1. First determine whether the page uses a single-column, two-column, or multi-column layout.
+                2. For two-column or multi-column academic papers, read in natural human reading order:
+                   - top to bottom within the leftmost column first,
+                   - then continue from the top of the next column.
+                3. Never interleave or merge sentences from different columns.
+                4. Keep the title, authors, abstract, section headings, figure captions, table captions, equations, references, and footnotes as separate logical blocks.
+                5. Preserve headers, lists, tables, code blocks, and equations using appropriate markdown formatting.
+                6. Ignore decorative page numbers and repeated running headers or footers unless they are part of the main content.
+                7. If the layout is ambiguous, prefer preserving the correct block order over guessing missing text.
+                8. When encountering chat history, use a chat-style format and clearly identify the sender of each message.
+
+                Output only the final markdown.
                 '''
             },
             {
@@ -498,10 +534,23 @@ class VisionDocumentProcessor(BaseDocumentProcessor):
         markdown_messages = [
             {
                 "role": "system",
-                "content": f'''You are an AI specialized in recognizing and extracting text. 
-                Your mission is to analyze {len(image_contents)} pages from a document and generate the result in markdown format, use markdown syntax to preserve the title level of the original document.
-                You should not include page numbers for better readability.
-                When encountering chat history, use the format of chat message, clearly identify the sender of each message.
+                "content": f'''You are an AI specialized in OCR, document parsing, and layout-aware markdown conversion.
+                Your task is to analyze {len(image_contents)} consecutive document pages and convert them into clean markdown while preserving the original logical structure across pages.
+
+                Follow these layout rules carefully:
+                1. Determine whether each page uses a single-column, two-column, or multi-column layout.
+                2. For two-column or multi-column academic papers, read in natural human reading order on each page:
+                   - top to bottom within the leftmost column first,
+                   - then continue from the top of the next column.
+                3. Never interleave or merge sentences from different columns.
+                4. Preserve continuity across consecutive pages, but do not invent cross-page merges when the page break is unclear.
+                5. Keep the title, authors, abstract, section headings, figure captions, table captions, equations, references, and footnotes as separate logical blocks.
+                6. Preserve headers, lists, tables, code blocks, and equations using appropriate markdown formatting.
+                7. Ignore decorative page numbers and repeated running headers or footers unless they are part of the main content.
+                8. If the layout is ambiguous, prefer preserving the correct block order over guessing missing text.
+                9. When encountering chat history, use a chat-style format and clearly identify the sender of each message.
+
+                Output only the final markdown.
                 '''
             },
             {
