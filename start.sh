@@ -14,5 +14,17 @@ export QWEN_API_KEY="$DASHSCOPE_API_KEY"
 export QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 export QWEN_MODEL="qwen3.5-flash"
 
-source .venv/bin/activate
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-mark-everything-down}"
+CONDA_SH="/home/krixdina/miniconda3/etc/profile.d/conda.sh"
+
+if command -v conda >/dev/null 2>&1; then
+  eval "$(conda shell.bash hook)"
+elif [[ -f "$CONDA_SH" ]]; then
+  source "$CONDA_SH"
+else
+  echo "Conda was not found. Add Conda to PATH or set up /home/krixdina/miniconda3." >&2
+  exit 1
+fi
+
+conda activate "$CONDA_ENV_NAME"
 python main.py --ui
