@@ -14,6 +14,15 @@ export QWEN_API_KEY="$DASHSCOPE_API_KEY"
 export QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 export QWEN_MODEL="qwen3.5-flash"
 
+# httpx (used by Gradio) recognizes SOCKS proxies as socks5://, not socks://.
+# Normalize common proxy variables before Python imports Gradio.
+for PROXY_VAR in http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY; do
+  PROXY_VALUE="${!PROXY_VAR:-}"
+  if [[ "$PROXY_VALUE" == socks://* ]]; then
+    export "$PROXY_VAR=socks5://${PROXY_VALUE#socks://}"
+  fi
+done
+
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-mark-everything-down}"
 CONDA_SH="/home/krixdina/miniconda3/etc/profile.d/conda.sh"
 
