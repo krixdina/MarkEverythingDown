@@ -12,7 +12,7 @@ fi
 
 export QWEN_API_KEY="$DASHSCOPE_API_KEY"
 export QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-export QWEN_MODEL="qwen3.5-flash"
+export QWEN_MODEL="qwen3.7-flash"
 
 # httpx (used by Gradio) recognizes SOCKS proxies as socks5://, not socks://.
 # Normalize common proxy variables before Python imports Gradio.
