@@ -113,6 +113,8 @@ The MarkEverythingDown web interface provides an intuitive way to convert your d
    - **API URL**: The base URL for your API endpoint (default: "http://localhost:1234/v1")
    - **Model Name**: The model to use for processing (default: "qwen2.5-vl-7b-instruct")
 
+PDFs use the vision model by default, so a working vision API configuration is required. Uncheck **Use Vision Model for PDFs** to try text extraction first. This setting applies to all PDFs in the upload batch.
+
 ### Command Line
 
 ```bash
@@ -134,7 +136,8 @@ python main.py sample_pdf.pdf # path to input file \
 |--------|-------------|---------|
 | `--output`, `-o` | Output directory for markdown files | `output` |
 | `--ui` | Launch the graphical user interface | - |
-| `--force-vision` | Use vision model for PDFs instead of text extraction | `False` |
+| `--force-vision` | Use vision model for PDFs instead of text extraction | `True` |
+| `--no-force-vision` | Try PDF text extraction first; fall back to vision if extracted content is under 500 characters | - |
 | `--max-concurrent` | Maximum concurrent workers for PDF page processing | `2` |
 | `--images-per-batch` | Maximum number of PDF pages per API call | `1` |
 | `--dynamic-batching` | Automatically adjust images-per-batch based on page complexity and maximum tokens per batch | `True` |
@@ -250,7 +253,7 @@ contributions of lasting importance to computing.
 
 ### 2. PDF Processing (Two Methods)
 
-#### Text Extraction (Default)
+#### Text Extraction (Optional: `--no-force-vision`)
 
 **Input**: [sample_pdf.pdf](test_docs/sample_pdf.pdf)
 
@@ -352,7 +355,7 @@ on smartphones and computers.
 2
 ```
 
-#### Vision Processing (For Scanned Documents)
+#### Vision Processing (Default for All PDFs)
 
 **Output** (`test_output/sample_pdf_vision.md`):
 

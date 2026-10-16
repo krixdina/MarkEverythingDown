@@ -15,7 +15,7 @@ def _ensure_localhost_bypasses_proxy():
                 entries.append(host)
         os.environ[key] = ",".join(entries)
 
-def process_file(file_path, output_dir, force_vision=False, max_concurrent=2, images_per_batch=1, 
+def process_file(file_path, output_dir, force_vision=True, max_concurrent=2, images_per_batch=1,
                temperature=0.0, max_tokens=None, dynamic_batching=True, max_tokens_per_batch=4000):
     """Process a single file"""
     try:
@@ -33,7 +33,7 @@ def process_file(file_path, output_dir, force_vision=False, max_concurrent=2, im
             processor = VisionDocumentProcessor(temperature=temperature, max_tokens=max_tokens)
         else:
             # Use standard document detection
-            processor = BaseDocumentProcessor.get_processor(file_path)
+            processor = BaseDocumentProcessor.get_processor(file_path, force_vision=force_vision)
             
         print(f"Using {processor.__class__.__name__} for {file_path}")
         
@@ -64,7 +64,7 @@ def process_file(file_path, output_dir, force_vision=False, max_concurrent=2, im
         import traceback
         traceback.print_exc()
 
-def process_directory(input_dir, output_dir, force_vision=False, max_concurrent=2, images_per_batch=1,
+def process_directory(input_dir, output_dir, force_vision=True, max_concurrent=2, images_per_batch=1,
                     temperature=0.0, max_tokens=None, dynamic_batching=True, max_tokens_per_batch=4000):
     """Process all files in directory"""
     for root, _, files in os.walk(input_dir):
@@ -79,8 +79,12 @@ def main():
     parser.add_argument("input", nargs="?", help="Input file or directory path")
     parser.add_argument("--output", "-o", help="Output directory path", default="output")
     parser.add_argument("--ui", action="store_true", help="Launch graphical user interface")
-    parser.add_argument("--force-vision", action="store_true", 
-                       help="Force using vision model for PDFs instead of text extraction")
+    vision_mode = parser.add_mutually_exclusive_group()
+    vision_mode.add_argument("--force-vision", action="store_true", dest="force_vision",
+                             help="Use vision model for PDFs (default)")
+    vision_mode.add_argument("--no-force-vision", action="store_false", dest="force_vision",
+                             help="Use PDF text extraction, with vision fallback for sparse text")
+    parser.set_defaults(force_vision=True)
     parser.add_argument("--max-concurrent", type=int, default=2,
                        help="Maximum number of concurrent workers for PDF page processing (default: 2)")
     parser.add_argument("--api-key", help="API key for Qwen vision processor")

@@ -248,7 +248,7 @@ class BaseDocumentProcessor(ABC):
         pass
 
     @classmethod
-    def get_processor(cls, file_path: str, force_vision: bool = False) -> "BaseDocumentProcessor":
+    def get_processor(cls, file_path: str, force_vision: bool = True) -> "BaseDocumentProcessor":
         """Factory method to get appropriate processor for a file"""
         doc_type = DocumentType.from_file_extension(file_path)
         
@@ -263,8 +263,8 @@ class BaseDocumentProcessor(ABC):
         from processors.text.text_processor import TextProcessor
         from processors.text.excel_processor import ExcelProcessor
         
-        # Use vision processor if forced (applies to PDF)
-        if force_vision:
+        # Use vision by default for PDFs; other formats retain their own processors.
+        if force_vision and doc_type == DocumentType.PDF:
             return VisionDocumentProcessor()
         
         # Return appropriate processor based on document type

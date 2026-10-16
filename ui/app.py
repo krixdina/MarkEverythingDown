@@ -18,12 +18,10 @@ def get_ui_api_defaults():
 def detect_document_type(file_obj):
     """Detect document type from file extension"""
     if file_obj is None:
-        return "No file selected", False
+        return "No file selected"
     
     doc_type = DocumentType.from_file_extension(file_obj.name)
-    # Only show force vision option for PDFs
-    show_force_vision = (doc_type == DocumentType.PDF)
-    return f"{doc_type.value.upper()} Document", show_force_vision
+    return f"{doc_type.value.upper()} Document"
 
 def process_documents(file_objs, output_dir, force_vision, max_concurrent, images_per_batch, 
                     api_key, api_url, model, temperature, max_tokens, dynamic_batching, max_tokens_per_batch,
@@ -111,7 +109,7 @@ def process_documents(file_objs, output_dir, force_vision, max_concurrent, image
                     print(f"Using Vision processor for image: {file_obj.name}")
                     processor = VisionDocumentProcessor(temperature=temperature, max_tokens=max_tokens_value)
                 else:
-                    processor = BaseDocumentProcessor.get_processor(temp_path)
+                    processor = BaseDocumentProcessor.get_processor(temp_path, force_vision=force_vision)
                     print(f"Using {processor.__class__.__name__} for {file_obj.name}")
                 
                 # Add debug output to see what configuration is being used
@@ -278,11 +276,11 @@ def create_ui():
                                 interactive=False
                             )
                             
-                            # Force vision option (only visible for PDFs)
+                            # PDF processing mode applies to every PDF in the upload batch.
                             force_vision = gr.Checkbox(
                                 label="Use Vision Model for PDFs",
-                                value=False,
-                                info="Recommended for scanned PDFs"
+                                value=True,
+                                info="Enabled by default for all PDFs. Uncheck to try text extraction first."
                             )
                     
                     # Output directory with improved styling
@@ -401,7 +399,7 @@ def create_ui():
         file_input.change(
             fn=lambda files: detect_document_type(files[0] if files else None),
             inputs=[file_input],
-            outputs=[doc_type, force_vision]
+            outputs=[doc_type]
         )
         
         # Toggle visibility of max_tokens_per_batch based on dynamic_batching
