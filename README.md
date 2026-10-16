@@ -2,7 +2,7 @@
 
 通过视觉语言模型（VLM）的 API，将 PDF 文件转换为结构清晰、便于阅读和整理的 Markdown 文件。本 fork 主要用于学术论文转换，针对双栏论文的阅读顺序设置了明确的提示词规则。
 
-## 使用方法：网页界面
+## 使用方法：通过网页界面上传文件
 
 ![网页转换界面](ui/GUI.png)
 
@@ -71,7 +71,7 @@ python -m pip install -r requirements.txt
 conda install -c conda-forge poppler -y
 ```
 
-如果终端不能识别 `conda activate`，先加载 Conda 的初始化脚本。
+如果终端不能识别 `conda activate`，请先加载 Conda 的初始化脚本。
 
 ## 致谢与原项目
 
